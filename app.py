@@ -98,7 +98,7 @@ def make_histogram(velocities):
 
 def make_sensitivity_chart(sensitivity):
     labels = {"wind_speed": "Wind speed", "host_density_mean": "Host density",
-              "base_spread_prob": "Spread probability"}
+              "temperature": "Temperature"}
     names = [labels.get(k, k) for k in sensitivity]
     scores = list(sensitivity.values())
     colours = ["#1D9E75" if s == max(scores) else "#5DCAA5" for s in scores]
@@ -107,7 +107,7 @@ def make_sensitivity_chart(sensitivity):
     ax.bar_label(bars, fmt="%.2f", padding=4, fontsize=8)
     ax.set_xlim(0, 1.2)
     ax.set_xlabel("Sensitivity score")
-    ax.set_title("Variable sensitivity ranking", fontsize=11)
+    ax.set_title("Environmental variable sensitivity", fontsize=11)
     ax.grid(axis="x", linestyle="--", alpha=0.3)
     return fig
 
@@ -118,7 +118,7 @@ if not run:
     - The forest is represented as an **N×N grid** where each cell has a host tree density and temperature
     - A pest starts at a random cell and spreads to neighbours based on a probability influenced by **host density, temperature, and wind**
     - **Monte Carlo** runs the simulation M times with randomised wind conditions to produce a distribution of outcomes
-    - The **sensitivity ranking** shows which variable most influences how fast the pest spreads
+    - The **sensitivity ranking** shows which environmental variable — host density, temperature, or wind — most drives pest spread
 
     ### Dataset
     Host density is derived from the **Kaggle Forest Cover Type dataset** — 565,892 real forest patches
