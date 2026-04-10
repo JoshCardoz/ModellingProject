@@ -78,10 +78,20 @@ class MonteCarloSimulation:
     def _run_trial(self, trial_seed: int) -> dict:
         """Run a single trial and return its results."""
 
-        # Fresh grid — same host density, new randomised temperature
+        # Perturb base_spread_prob ±15% around the set value
+        spread_prob = float(np.clip(
+            self.rng.uniform(self.base_spread_prob * 0.85, self.base_spread_prob * 1.15),
+            0.01, 1.0
+        ))
+
+        # Perturb host density map by a random scale factor ±15%
+        density_scale = float(self.rng.uniform(0.85, 1.15))
+        host_density = np.clip(self.base_host_density * density_scale, 0.0, 1.0)
+
+        # Fresh grid — perturbed host density, new randomised temperature
         grid = GridEnvironment(
             n=self.n,
-            host_density=self.base_host_density.copy(),
+            host_density=host_density,
             temp_mean=self.temp_mean,
             temp_std=self.temp_std,
             seed=trial_seed,
@@ -101,7 +111,7 @@ class MonteCarloSimulation:
             t_min=self.t_min,
             t_max=self.t_max_temp,
             rho_min=self.rho_min,
-            base_spread_prob=self.base_spread_prob,
+            base_spread_prob=spread_prob,
             depletion_rate=self.depletion_rate,
             wind_vector=wind_vector,
             seed=trial_seed + 1000,
@@ -121,6 +131,8 @@ class MonteCarloSimulation:
             "wind_speed":      wind_speed,
             "wind_angle":      wind_angle,
             "wind_vector":     wind_vector,
+            "spread_prob":     spread_prob,
+            "density_scale":   density_scale,
             "history":         history,
             "infested_counts": infested_counts,
             "spread_velocity": spread_velocity,
@@ -168,8 +180,9 @@ class MonteCarloSimulation:
         # ── Variable sensitivity ──────────────────────────────────────────────
         # Pearson correlation between each input variable and spread velocity.
         # Higher absolute correlation = more influential variable.
-        wind_speeds  = np.array([t["wind_speed"] for t in trials])
-        final_counts = np.array([t["final_infested"] for t in trials])
+        wind_speeds    = np.array([t["wind_speed"]    for t in trials])
+        spread_probs   = np.array([t["spread_prob"]   for t in trials])
+        density_scales = np.array([t["density_scale"] for t in trials])
 
         def safe_corr(x, y):
             if np.std(x) == 0 or np.std(y) == 0:
@@ -177,11 +190,9 @@ class MonteCarloSimulation:
             return float(np.corrcoef(x, y)[0, 1])
 
         sensitivity = {
-            "wind_speed":      abs(safe_corr(wind_speeds, velocities)),
-            "base_spread_prob": 1.0,   # constant across trials — acts as baseline
-            "host_density_mean": abs(safe_corr(
-                [np.mean(self.base_host_density)] * self.m, velocities
-            )),
+            "wind_speed":        abs(safe_corr(wind_speeds,    velocities)),
+            "base_spread_prob":  abs(safe_corr(spread_probs,   velocities)),
+            "host_density_mean": abs(safe_corr(density_scales, velocities)),
         }
 
         # Normalise sensitivity scores to [0, 1]
